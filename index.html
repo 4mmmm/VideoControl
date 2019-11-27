@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+  <title>Microsoft Cognitive Services Speech API</title>
+
+  <meta charset="utf-8" />
+  <script src="js/jquery.min.js" type="text/javascript"></script>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $("#File").change(function (file) {
+                $("body").append(file.target.files[0]);
+                var url = window.URL.createObjectURL(file.target.files[0]);
+                $("#v")[0].src = url;
+                $("#v")[0].onload = function () {
+                    window.URL.revokeObjectURL(src);
+                };
+                $("#v").css({ "width": "100%", "height": "100%" });
+            });
+        });
+    </script>
+
+<!--  <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
+
+<!--<link href="css/style.css" rel="stylesheet" media="all">  -->	
+
+</head>
+
+<body style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; font-size:13px;">
+
+  <!-- <uidiv> -->
+
+  <div id="warning">
+
+    <h1 style="font-weight:500;">Speech Recognition Speech SDK not found (microsoft.cognitiveservices.speech.sdk.bundle.js missing).</h1>
+
+  </div>
+
+  
+
+  <div id="content" style="display:none">
+
+    <table width="100%">
+
+      <tr>
+
+        <td></td>
+
+        <td>
+
+          <h1>
+
+            <abbr title="HyperText Markup Language 5">HTML5</abbr> 
+
+            Video Voice Control with the Web Speech 
+            
+            <abbr title="Application Programming Interface">API</abbr>
+
+          </h1>
+
+        </td>
+
+      </tr>
+
+      <tr>
+
+        <td align="right"><a href="https://docs.microsoft.com/azure/cognitive-services/speech-service/get-started" target="_blank">Subscription</a>:</td>
+
+        <td><input id="subscriptionKey" type="text" size="40" value="subscription"></td>
+
+      </tr>
+
+      <tr>
+
+        <td align="right">Region</td>
+
+        <td><input id="serviceRegion" type="text" size="40" value="YourServiceRegion"></td>
+
+      </tr>
+
+      <tr>
+
+        <td></td>
+
+        <td><button id="startRecognizeOnceAsyncButton">Start recognition</button></td>
+
+      </tr>
+
+      <tr>
+
+        <td align="right" valign="top">Results</td>
+
+        <td><textarea id="phraseDiv" style="display: inline-block;width:500px;height:200px"></textarea></td>
+
+      </tr>
+
+    </table>
+
+  </div>
+
+  <input id="File" type="file" id="file" />
+  <video id="v" controls preload="metadata" autoplay='autoplay'></video>
+
+
+  <div class="rec-status">Recogniser status:
+
+      <span id="recStatus">not recognising</span>
+  
+  </div>
+
+  <p>
+      Click "Start Recognition", 
+      
+      give microphone access permission and start controlling the video's playback, mute and volume control via speech.
+      
+      <br>
+      
+      Available commands are:
+  </p>
+
+  <ul>
+      <li id="vidPlay">视频播放</li>
+      <li id="vidStop">视频暂停</li>
+      <li id="vidReplay">视频重播</li>
+      <li id="vidVolOn">视频音量打开</li>
+      <li id="vidVolOff">视频音量关闭</li>
+      <li id="vidVolInc">视频音量增加</li>
+      <li id="vidVolDec">视频音量减小</li>
+  </ul>
+
+
+
+
+
+
+  <!-- </uidiv> -->
+
+
+
+  <!-- <speechsdkref> -->
+
+  <!-- Speech SDK reference sdk. -->
+
+  <script src="js/microsoft.cognitiveservices.speech.sdk.bundle.js"></script>
+
+  <!-- </speechsdkref> -->
+
+
+
+  <!-- <authorizationfunction> -->
+
+  <!-- Speech SDK Authorization token -->
+
+  <script>
+
+  // Note: Replace the URL with a valid endpoint to retrieve
+
+  //       authorization tokens for your subscription.
+
+  var authorizationEndpoint = "token.php";
+
+
+
+  function RequestAuthorizationToken() {
+
+    if (authorizationEndpoint) {
+
+      var a = new XMLHttpRequest();
+
+      a.open("GET", authorizationEndpoint);
+
+      a.setRequestHeader("Content-Type", "https://westus.api.cognitive.microsoft.com/sts/v1.0");
+
+      a.send("");
+
+      a.onload = function() {
+
+          var token = JSON.parse(atob(this.responseText.split(".")[1]));
+
+          serviceRegion.value = token.region;
+
+          authorizationToken = this.responseText;
+
+          subscriptionKey.disabled = true;
+
+          subscriptionKey.value = "using authorization token (hit F5 to refresh)";
+
+          console.log("Got an authorization token: " + token);
+
+      }
+
+    }
+
+  }
+
+  </script>
+
+  <!-- </authorizationfunction> -->
+
+
+
+  <!-- <quickstartcode> -->
+
+  <!-- Speech SDK USAGE -->
+
+  <script>
+
+    // status fields and start button in UI
+
+    var phraseDiv;
+
+    var startRecognizeOnceAsyncButton;
+
+
+
+    // subscription key and region for speech services.
+
+    var subscriptionKey, serviceRegion;
+
+    var authorizationToken;
+
+    var SpeechSDK;
+
+    var recognizer;
+
+    var video = document.getElementById('v');
+
+    var recStatus = document.getElementById('recStatus');
+
+
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+      startRecognizeOnceAsyncButton = document.getElementById("startRecognizeOnceAsyncButton");
+
+      subscriptionKey = document.getElementById("subscriptionKey");
+
+      serviceRegion = document.getElementById("serviceRegion");
+
+      phraseDiv = document.getElementById("phraseDiv");
+
+
+
+      startRecognizeOnceAsyncButton.addEventListener("click", function () {
+
+        startRecognizeOnceAsyncButton.disabled = true;
+
+        phraseDiv.innerHTML = "";
+
+
+
+        // if we got an authorization token, use the token. Otherwise use the provided subscription key
+
+        var speechConfig;
+
+        if (authorizationToken) {
+
+          speechConfig = SpeechSDK.SpeechConfig.fromAuthorizationToken(authorizationToken, serviceRegion.value);
+
+        } else {
+
+          if (subscriptionKey.value === "" || subscriptionKey.value === "subscription") {
+
+            alert("Please enter your Microsoft Cognitive Services Speech subscription key!");
+
+            return;
+
+          }
+
+          speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey.value, serviceRegion.value);
+
+        }
+
+
+
+        speechConfig.speechRecognitionLanguage = "zh-CN";
+
+        var audioConfig  = SpeechSDK.AudioConfig.fromDefaultMicrophoneInput();
+
+        recognizer = new SpeechSDK.SpeechRecognizer(speechConfig, audioConfig);
+
+
+
+        recognizer.recognizeOnceAsync(
+
+          function (result) {
+
+            startRecognizeOnceAsyncButton.disabled = false;
+
+            phraseDiv.innerHTML += result.text;
+
+            window.console.log(result);
+
+            recStatus.innerHTML = "recognizing";
+
+            // Simple function that checks existence of s in str
+            var userSaid = function(str, s) {
+
+                return str.indexOf(s) > -1;
+
+            }
+
+            // Highlights the relevant command that was recognised in the command list for display purposes
+                       
+            var highlightCommand = function(cmd) {
+                            
+              var el = document.getElementById(cmd);
+                            
+              el.setAttribute('data-state', 'highlight');
+                            
+              setTimeout(function() {
+                                
+                el.setAttribute('data-state', '');
+                            
+              }, 3000);
+                        
+            }
+
+                                    
+            // Process the results when they are returned from the recogniser
+                    
+            if (userSaid(result.text, '视频')) {
+            
+              // Replay the video
+            
+              if (userSaid(result.text, '重播')) {
+            
+                video.currentTime = 0;
+            
+                video.play();
+            
+                highlightCommand('vidReplay');
+            
+              }
+
+            
+              // Play the video
+            
+              else if (userSaid(result.text, '播放')) {
+            
+                video.play();
+            
+                highlightCommand('vidPlay');
+            
+              }
+
+            
+              // Stop the video
+            
+              else if (userSaid(result.text, '暂停')) {
+            
+                video.pause();
+            
+                highlightCommand('vidStop');
+            
+              }
+
+            
+              // If the user said 'volume' then parse it even further
+            
+              else if (userSaid(result.text, '音量')) {
+            
+                // Check the current volume setting of the video
+            
+                var vol = Math.floor(video.volume * 10) / 10;
+            
+                // Increase the volume
+            
+                if (userSaid(result.text, '增加')) {
+            
+                  if (vol >= 0.9) video.volume = 1;
+            
+                  else video.volume += 0.1;
+            
+                  highlightCommand('vidVolInc');
+            
+                }
+
+
+                
+                // Decrease the volume
+                
+                else if (userSaid(result.text, '减小')) {
+                
+                  if (vol <= 0.1) video.volume = 0;
+                
+                  else video.volume -= 0.1;
+                
+                  highlightCommand('vidVolDec');
+                
+                }
+
+                
+                // Turn the volume off (mute)
+                
+                else if (userSaid(result.text, '关闭')) {
+                
+                  video.muted = true;
+                
+                  highlightCommand('vidVolOff');
+                                
+                
+                }
+
+                
+                // Turn the volume on (unmute)
+                
+                else if (userSaid(result.text, '打开')) {
+                
+                  video.muted = false;
+                
+                  highlightCommand('vidVolOn');
+                
+                }
+                
+              }
+              
+            }
+
+
+            recognizer.close();
+
+            recognizer = undefined;
+
+          },
+
+          function (err) {
+
+            startRecognizeOnceAsyncButton.disabled = false;
+
+            phraseDiv.innerHTML += err;
+
+            window.console.log(err);
+
+
+
+            recognizer.close();
+
+            recognizer = undefined;
+
+          }
+
+
+          
+          
+          );
+
+      });
+
+
+
+      if (!!window.SpeechSDK) {
+
+        SpeechSDK = window.SpeechSDK;
+
+        startRecognizeOnceAsyncButton.disabled = false;
+
+
+
+        document.getElementById('content').style.display = 'block';
+
+        document.getElementById('warning').style.display = 'none';
+
+
+
+        // in case we have a function for getting an authorization token, call it.
+
+        if (typeof RequestAuthorizationToken === "function") {
+
+            RequestAuthorizationToken();
+
+        }
+
+      }
+
+    });
+
+  </script>
+
+  <!-- </quickstartcode> -->
+
+</body>
+
+</html>
