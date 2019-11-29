@@ -22,6 +22,8 @@
         });
     </script>
 
+    <link href="css/style.css" rel="stylesheet" media="all">
+
 <!--  <meta name="viewport" content="width=device-width, initial-scale=1.0"> -->
 
 <!--<link href="css/style.css" rel="stylesheet" media="all">  -->	
@@ -64,35 +66,21 @@
 
       </tr>
 
-      <tr>
-
-        <td align="right"><a href="https://docs.microsoft.com/azure/cognitive-services/speech-service/get-started" target="_blank">Subscription</a>:</td>
-
-        <td><input id="subscriptionKey" type="text" size="40" value="subscription"></td>
-
-      </tr>
-
-      <tr>
-
-        <td align="right">Region</td>
-
-        <td><input id="serviceRegion" type="text" size="40" value="YourServiceRegion"></td>
-
-      </tr>
+      
 
       <tr>
 
         <td></td>
 
-        <td><button id="startRecognizeOnceAsyncButton">Start recognition</button></td>
+        <td><button id="startRecognizeOnceAsyncButton">开始识别</button></td>
 
       </tr>
 
       <tr>
 
-        <td align="right" valign="top">Results</td>
+        <td align="right" valign="top"></td>
 
-        <td><textarea id="phraseDiv" style="display: inline-block;width:500px;height:200px"></textarea></td>
+        <td><textarea id="phraseDiv" style="display: inline-block;width:250px;height:50px"></textarea></td>
 
       </tr>
 
@@ -103,21 +91,14 @@
   <input id="File" type="file" id="file" />
   <video id="v" controls preload="metadata" autoplay='autoplay'></video>
 
-
-  <div class="rec-status">Recogniser status:
-
-      <span id="recStatus">not recognising</span>
-  
-  </div>
-
   <p>
-      Click "Start Recognition", 
-      
-      give microphone access permission and start controlling the video's playback, mute and volume control via speech.
-      
+      点击“选择文件”将你的mp4视频传递上来，即可享受语音控制功能哦~
+
       <br>
       
-      Available commands are:
+      可以参考下面的提示命令
+      
+
   </p>
 
   <ul>
@@ -261,15 +242,7 @@
 
         } else {
 
-          if (subscriptionKey.value === "" || subscriptionKey.value === "subscription") {
-
-            alert("Please enter your Microsoft Cognitive Services Speech subscription key!");
-
-            return;
-
-          }
-
-          speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey.value, serviceRegion.value);
+          speechConfig = SpeechSDK.SpeechConfig.fromSubscription("f5f2061567454dac9ec268393ace74bc", "westus");
 
         }
 
