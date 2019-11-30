@@ -72,7 +72,7 @@
 
         <td></td>
 
-        <td><button id="startRecognizeOnceAsyncButton">开始识别</button></td>
+        <td><button id="startRecognizeOnceAsyncButton">Start recognition</button></td>
 
       </tr>
 
@@ -90,6 +90,9 @@
 
   <input id="File" type="file" id="file" />
   <video id="v" controls preload="metadata" autoplay='autoplay'></video>
+
+
+  
 
   <p>
       点击“选择文件”将你的mp4视频传递上来，即可享受语音控制功能哦~
@@ -265,8 +268,6 @@
             phraseDiv.innerHTML += result.text;
 
             window.console.log(result);
-
-            recStatus.innerHTML = "recognizing";
 
             // Simple function that checks existence of s in str
             var userSaid = function(str, s) {
